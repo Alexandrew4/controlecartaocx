@@ -1,0 +1,291 @@
+/* RESET E ESTILOS GERAIS */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: #f7fafc;
+  color: #2d3748;
+  padding: 20px;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 24px;
+  color: #1a202c;
+}
+
+.card-section {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.card-section h2 {
+  font-size: 1.25rem;
+  margin-bottom: 16px;
+  color: #2b6cb0;
+  border-bottom: 2px solid #ebf8ff;
+  padding-bottom: 8px;
+}
+
+.instrucoes-importacao {
+  font-size: 0.85rem;
+  color: #718096;
+  margin-bottom: 12px;
+}
+
+/* FORMULÁRIOS E INPUTS */
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #4a5568;
+}
+
+input, textarea {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+textarea {
+  resize: vertical;
+  width: 100%;
+}
+
+input:focus, textarea:focus {
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+}
+
+/* BOTÕES */
+.btn-primary {
+  width: 100%;
+  padding: 12px;
+  background-color: #3182ce;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #2b6cb0;
+}
+
+.btn-secondary {
+  background-color: #4a5568;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #2d3748;
+}
+
+.btn-upload {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.backup-actions {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.backup-actions h3 {
+  font-size: 0.95rem;
+  color: #4a5568;
+  margin-bottom: 12px;
+}
+
+/* CARDS DE FATURAS */
+.card-fatura {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+  background-color: #faf5ff;
+}
+
+.header-fatura {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.header-fatura h3 {
+  font-size: 1.15rem;
+  color: #2d3748;
+}
+
+.data-vencimento-tag {
+  font-size: 0.85rem;
+  color: #718096;
+  font-weight: normal;
+}
+
+.total-fatura {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #2b6cb0;
+}
+
+/* BARRA DE PROGRESSO */
+.progresso-container {
+  width: 100%;
+  background-color: #e2e8f0;
+  border-radius: 8px;
+  height: 12px;
+  overflow: hidden;
+  margin: 12px 0 6px 0;
+}
+
+.progresso-barra {
+  height: 100%;
+  width: 0%;
+  background-color: #38a169;
+  border-radius: 8px;
+  transition: width 0.4s ease, background-color 0.3s ease;
+}
+
+.progresso-barra.alerta {
+  background-color: #dd6b20;
+}
+
+.progresso-barra.excedido {
+  background-color: #e53e3e;
+}
+
+.info-limite {
+  font-size: 0.8rem;
+  color: #718096;
+  text-align: right;
+  margin-bottom: 16px;
+}
+
+/* SUBGRUPOS POR CARTÃO DE CRÉDITO */
+.grupo-cartao {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.header-cartao {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: #4a5568;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #cbd5e0;
+  margin-bottom: 8px;
+}
+
+.nome-cartao {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.badge-cartao {
+  background-color: #edf2f7;
+  color: #2b6cb0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.subtotal-cartao {
+  color: #2d3748;
+}
+
+/* LISTA DE ITENS */
+.lista-itens {
+  list-style: none;
+}
+
+.lista-itens li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f7fafc;
+}
+
+.lista-itens li:last-child {
+  border-bottom: none;
+}
+
+.item-info small {
+  color: #718096;
+}
+
+.item-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-excluir {
+  background: none;
+  border: none;
+  color: #e53e3e;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.btn-excluir:hover {
+  background-color: #fff5f5;
+}
+
+.mensagem-vazia {
+  color: #718096;
+  text-align: center;
+  padding: 20px;
+}

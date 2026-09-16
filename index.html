@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerenciador de Faturas de Cartão</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Controle de Cartões e Faturas</h1>
+
+    <!-- 1. IMPORTAR COMPRA POR TEXTO (SMS / NOTIFICAÇÃO) -->
+    <section class="card-section">
+      <h2>1. Importar Compra por Texto (SMS / Notificação)</h2>
+      <p class="instrucoes-importacao">Cole abaixo a mensagem recebida por SMS ou notificação do banco para preencher os campos automaticamente.</p>
+      
+      <div class="form-group">
+        <textarea id="texto-importacao" rows="3" placeholder="Ex: Compra aprovada no seu NUBANK valor R$ 150,00 em MERCADO LIVRE 15/09/2026 em 3x"></textarea>
+      </div>
+      <button type="button" id="btn-extrair" class="btn-secondary">Extrair Dados da Mensagem</button>
+    </section>
+
+    <!-- 2. FORMULÁRIO DE CADASTRO DE COMPRA -->
+    <section class="card-section">
+      <h2>2. Nova Compra</h2>
+      <form id="form-compra">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="estabelecimento">Estabelecimento / Descrição:</label>
+            <input type="text" id="estabelecimento" placeholder="Ex: Mercado, Mercado Livre" required>
+          </div>
+          <div class="form-group">
+            <label for="cartao">Cartão de Crédito:</label>
+            <input type="text" id="cartao" placeholder="Ex: Nubank, Itaú" list="lista-cartoes" required>
+            <datalist id="lista-cartoes"></datalist>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="valor-total">Valor Total (R$):</label>
+            <input type="number" id="valor-total" step="0.01" placeholder="0.00" required>
+          </div>
+          <div class="form-group">
+            <label for="total-parcelas">Qtd. Parcelas:</label>
+            <input type="number" id="total-parcelas" value="1" min="1" required>
+          </div>
+          <div class="form-group">
+            <label for="data-compra">Data da Compra:</label>
+            <input type="date" id="data-compra" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary">Cadastrar Compra</button>
+      </form>
+    </section>
+
+    <!-- 3. CONFIGURAÇÕES DA FATURA E BACKUP -->
+    <section class="card-section">
+      <h2>3. Configurações e Backup</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="dia-vencimento">Dia do Vencimento da Fatura:</label>
+          <input type="number" id="dia-vencimento" min="1" max="31" value="10" placeholder="Ex: 10">
+        </div>
+        <div class="form-group">
+          <label for="limite-mensal">Meta / Limite Mensal (R$):</label>
+          <input type="number" id="limite-mensal" value="2000" step="100" placeholder="Ex: 2000">
+        </div>
+      </div>
+
+      <div class="backup-actions">
+        <h3>Backup de Dados (JSON)</h3>
+        <div class="form-row">
+          <button type="button" id="btn-exportar-json" class="btn-secondary">Exportar Backup (.json)</button>
+          
+          <label for="input-importar-json" class="btn-secondary btn-upload">
+            Importar Backup (.json)
+          </label>
+          <input type="file" id="input-importar-json" accept=".json" style="display: none;">
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. PROJEÇÃO DE FATURAS -->
+    <section class="card-section">
+      <h2>4. Projeção de Faturas</h2>
+      <div id="lista-faturas">
+        <p class="mensagem-vazia">Nenhuma compra cadastrada no navegador.</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
