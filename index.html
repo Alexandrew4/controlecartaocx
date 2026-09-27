@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gerenciador de Faturas de Cartão</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 </head>
 <body>
   <div class="container">
@@ -16,7 +18,7 @@
       <p class="instrucoes-importacao">Cole abaixo a mensagem recebida por SMS ou notificação do banco para preencher os campos automaticamente.</p>
       
       <div class="form-group">
-        <textarea id="texto-importacao" rows="3" placeholder="Ex: Compra aprovada no seu NUBANK valor R$ 150,00 em MERCADO LIVRE 15/09/2026 em 3x"></textarea>
+        <textarea id="texto-importacao" rows="3" placeholder="Copie e cole o texto da notificacao recebida"></textarea>
       </div>
       <button type="button" id="btn-extrair" class="btn-secondary">Extrair Dados da Mensagem</button>
     </section>
@@ -51,6 +53,14 @@
             <input type="date" id="data-compra" required>
           </div>
         </div>
+        
+        <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px; margin-top: 8px;">
+  <input type="checkbox" id="compra-recorrente" style="width: auto; cursor: pointer;">
+  <label for="compra-recorrente" style="margin-bottom: 0; cursor: pointer; color: #6b46c1; font-weight: bold;">
+    Compra Recorrente (Repetir pelos próximos 6 meses)
+  </label>
+</div>
+
 
         <button type="submit" class="btn-primary">Cadastrar Compra</button>
       </form>
@@ -84,12 +94,20 @@
     </section>
 
     <!-- 4. PROJEÇÃO DE FATURAS -->
-    <section class="card-section">
-      <h2>4. Projeção de Faturas</h2>
-      <div id="lista-faturas">
-        <p class="mensagem-vazia">Nenhuma compra cadastrada no navegador.</p>
-      </div>
-    </section>
+<!-- Na section "4. Projeção de Faturas", insira a div do canvas antes de #lista-faturas -->
+<section class="card-section">
+  <h2>4. Projeção de Faturas</h2>
+  
+  <!-- Container do Gráfico -->
+  <div class="chart-container" style="position: relative; height: 300px; margin-bottom: 24px;">
+    <canvas id="grafico-faturas"></canvas>
+  </div>
+
+  <div id="lista-faturas">
+    <p class="mensagem-vazia">Nenhuma compra cadastrada no navegador.</p>
+  </div>
+</section>
+
   </div>
 
   <script src="script.js"></script>

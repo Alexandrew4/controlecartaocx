@@ -1,118 +1,138 @@
-// ARMAZENAMENTO DAS COMPRAS NO LOCALSTORAGE
+// ==========================================
+// ESTADO GLOBAL & INICIALIZAÇÃO
+// ==========================================
 let compras = JSON.parse(localStorage.getItem('compras_cartao')) || [];
 let diaVencimento = parseInt(localStorage.getItem('dia_vencimento')) || 10;
 let limiteMensal = parseFloat(localStorage.getItem('limite_mensal')) || 2000;
+let meuGrafico = null; // Instância do Chart.js
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Preenche a data da compra com a data atual por padrão
   document.getElementById('data-compra').valueAsDate = new Date();
   
-  // Carrega configurações salvas
   const inputVencimento = document.getElementById('dia-vencimento');
   const inputLimite = document.getElementById('limite-mensal');
 
-  inputVencimento.value = diaVencimento;
-  inputLimite.value = limiteMensal;
+  if (inputVencimento) inputVencimento.value = diaVencimento;
+  if (inputLimite) inputLimite.value = limiteMensal;
 
-  // Listeners para atualização em tempo real das configurações
-  inputVencimento.addEventListener('input', (e) => {
-    diaVencimento = parseInt(e.target.value) || 10;
-    localStorage.setItem('dia_vencimento', diaVencimento);
-    renderizarFaturas();
-  });
+  if (inputVencimento) {
+    inputVencimento.addEventListener('input', (e) => {
+      diaVencimento = parseInt(e.target.value) || 10;
+      localStorage.setItem('dia_vencimento', diaVencimento);
+      renderizarFaturas();
+    });
+  }
 
-  inputLimite.addEventListener('input', (e) => {
-    limiteMensal = parseFloat(e.target.value) || 2000;
-    localStorage.setItem('limite_mensal', limiteMensal);
-    renderizarFaturas();
-  });
+  if (inputLimite) {
+    inputLimite.addEventListener('input', (e) => {
+      limiteMensal = parseFloat(e.target.value) || 2000;
+      localStorage.setItem('limite_mensal', limiteMensal);
+      renderizarFaturas();
+    });
+  }
 
-  // Listeners para Exportação e Importação de JSON
-  document.getElementById('btn-exportar-json').addEventListener('click', exportarJSON);
-  document.getElementById('input-importar-json').addEventListener('change', importarJSON);
+  const btnExportar = document.getElementById('btn-exportar-json');
+  const inputImportar = document.getElementById('input-importar-json');
+
+  if (btnExportar) btnExportar.addEventListener('click', exportarJSON);
+  if (inputImportar) inputImportar.addEventListener('change', importarJSON);
 
   atualizarDatalistCartoes();
   renderizarFaturas();
 });
 
-// EXTRAÇÃO DE DADOS DA MENSAGEM (ATUALIZADO E REFINADO)
-document.getElementById('btn-extrair').addEventListener('click', () => {
-  const texto = document.getElementById('texto-importacao').value.trim();
+// ==========================================
+// EXTRAÇÃO DE DADOS DA MENSAGEM (SMS / NOTIFICAÇÃO)
+// ==========================================
+const btnExtrair = document.getElementById('btn-extrair');
+if (btnExtrair) {
+  btnExtrair.addEventListener('click', () => {
+    const texto = document.getElementById('texto-importacao').value.trim();
 
-  if (!texto) {
-    alert('Cole o texto da notificação primeiro.');
-    return;
-  }
+    if (!texto) {
+      alert('Cole o texto da notificação primeiro.');
+      return;
+    }
 
-  // 1. Extrair Valor (ex: R$ 113,04 | R$58,48 | valor: 150.00)
-  const regexValor = /(?:R\$\s*|valor\s*)([\d\.]+,\d{2}|\d+[\.,]\d+)/i;
-  const matchValor = texto.match(regexValor);
-  if (matchValor) {
-    // Remove pontos de milhar e substitui vírgula decimal por ponto
-    const valorTratado = matchValor[1].replace(/\./g, '').replace(',', '.');
-    document.getElementById('valor-total').value = parseFloat(valorTratado);
-  }
+    // Extrair Valor
+    const regexValor = /(?:R\$\s*|valor\s*)([\d\.]+,\d{2}|\d+[\.,]\d+)/i;
+    const matchValor = texto.match(regexValor);
+    if (matchValor) {
+      const valorTratado = matchValor[1].replace(/\./g, '').replace(',', '.');
+      document.getElementById('valor-total').value = parseFloat(valorTratado);
+    }
 
-  // 2. Extrair Parcelas (ex: 3x, em 12x, em 2 vezes, 5 vezes)
-  const regexParcelas = /(\d+)\s*(?:x|vezes)/i;
-  const matchParcelas = texto.match(regexParcelas);
-  if (matchParcelas) {
-    document.getElementById('total-parcelas').value = parseInt(matchParcelas[1]);
-  } else {
+    // Extrair Parcelas
+    const regexParcelas = /(\d+)\s*(?:x|vezes)/i;
+    const matchParcelas = texto.match(regexParcelas);
+    if (matchParcelas) {
+      document.getElementById('total-parcelas').value = parseInt(matchParcelas[1], 10);
+    } else {
+      document.getElementById('total-parcelas').value = 1;
+    }
+
+    // Extrair Cartão
+    const regexCartaoFinal = /(?:final|\*+)\s*(\d{4})/i;
+    const matchCartaoFinal = texto.match(regexCartaoFinal);
+    if (matchCartaoFinal) {
+      document.getElementById('cartao').value = matchCartaoFinal[1];
+    }
+
+    // Extrair Estabelecimento
+    const regexLocal = /(?:em|no|na)\s+([A-Z0-9\s]{3,25})/i;
+    const matchLocal = texto.match(regexLocal);
+    if (matchLocal) {
+      let nomeLimpo = matchLocal[1].split(/R\$|valor|\d{2}\/\d{2}/i)[0].trim();
+      document.getElementById('estabelecimento').value = nomeLimpo;
+    }
+
+    alert('Dados extraídos! Confira os campos antes de salvar.');
+  });
+}
+
+// ==========================================
+// CADASTRO DE COMPRA E PERSISTÊNCIA
+// ==========================================
+const formCompra = document.getElementById('form-compra');
+if (formCompra) {
+  formCompra.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const estabelecimento = document.getElementById('estabelecimento').value.trim();
+    const cartao = document.getElementById('cartao').value.trim();
+    const valorTotal = parseFloat(document.getElementById('valor-total').value);
+    const totalParcelas = parseInt(document.getElementById('total-parcelas').value, 10);
+    const dataCompra = document.getElementById('data-compra').value;
+    const isRecorrente = document.getElementById('compra-recorrente') ? document.getElementById('compra-recorrente').checked : false;
+
+    if (!estabelecimento || !cartao || isNaN(valorTotal) || !dataCompra) {
+      alert('Preencha todos os campos corretamente.');
+      return;
+    }
+
+    const novaCompra = {
+      id: Date.now(),
+      grupoRecorrenciaId: isRecorrente ? 'rec_' + Date.now() : null,
+      recorrente: isRecorrente,
+      estabelecimento,
+      cartao,
+      valorTotal,
+      totalParcelas: isRecorrente ? 1 : (totalParcelas || 1),
+      dataCompra
+    };
+
+    compras.push(novaCompra);
+    salvarECarregar();
+
+    e.target.reset();
+    document.getElementById('texto-importacao').value = '';
+    document.getElementById('data-compra').valueAsDate = new Date();
     document.getElementById('total-parcelas').value = 1;
-  }
-
-  // 3. Extrair Apenas os Dígitos Finais do Cartão (ex: "final 8810" ou "**** 8810" -> preenche apenas "8810")
-  const regexCartaoFinal = /(?:final|\*+)\s*(\d{4})/i;
-  const matchCartaoFinal = texto.match(regexCartaoFinal);
-  if (matchCartaoFinal) {
-    document.getElementById('cartao').value = matchCartaoFinal[1]; // Preenche apenas os 4 números
-  }
-
-  // 4. Extrair Estabelecimento (Procura texto após "em " ou "no ")
-  const regexLocal = /(?:em|no|na)\s+([A-Z0-9\s]{3,25})/i;
-  const matchLocal = texto.match(regexLocal);
-  if (matchLocal) {
-    // Limpa possíveis termos de valor/data concatenados ao nome do estabelecimento
-    let nomeLimpo = matchLocal[1]
-      .split(/R\$|valor|\d{2}\/\d{2}/i)[0]
-      .trim();
-    document.getElementById('estabelecimento').value = nomeLimpo;
-  }
-
-  alert('Dados extraídos! Confira os campos do formulário antes de salvar.');
-});
-
-// SUBMISSÃO DO FORMULÁRIO DE CADASTRO
-document.getElementById('form-compra').addEventListener('submit', (e) => {
-  e.preventDefault();
-
-  const estabelecimento = document.getElementById('estabelecimento').value.trim();
-  const cartao = document.getElementById('cartao').value.trim();
-  const valorTotal = parseFloat(document.getElementById('valor-total').value);
-  const totalParcelas = parseInt(document.getElementById('total-parcelas').value);
-  const dataCompra = document.getElementById('data-compra').value;
-
-  if (!estabelecimento || !cartao || isNaN(valorTotal) || isNaN(totalParcelas) || !dataCompra) {
-    alert('Preencha todos os campos corretamente.');
-    return;
-  }
-
-  const novaCompra = {
-    id: Date.now(),
-    estabelecimento,
-    cartao,
-    valorTotal,
-    totalParcelas,
-    dataCompra
-  };
-
-  compras.push(novaCompra);
-  salvarECarregar();
-  e.target.reset();
-  document.getElementById('texto-importacao').value = '';
-  document.getElementById('data-compra').valueAsDate = new Date();
-});
+    if (document.getElementById('compra-recorrente')) {
+      document.getElementById('compra-recorrente').checked = false;
+    }
+  });
+}
 
 function salvarECarregar() {
   localStorage.setItem('compras_cartao', JSON.stringify(compras));
@@ -120,26 +140,39 @@ function salvarECarregar() {
   renderizarFaturas();
 }
 
-function excluirCompra(id) {
-  compras = compras.filter(c => c.id !== id);
+function excluirCompra(id, grupoRecorrenciaId = null) {
+  if (grupoRecorrenciaId) {
+    const opcao = confirm(
+      "Esta é uma compra recorrente.\n\n" +
+      "Clique [OK] para excluir TODAS as recorrências deste serviço.\n" +
+      "Clique [Cancelar] para remover apenas esta transação."
+    );
+
+    if (opcao) {
+      compras = compras.filter(c => c.grupoRecorrenciaId !== grupoRecorrenciaId);
+    } else {
+      compras = compras.filter(c => c.id !== id);
+    }
+  } else {
+    if (confirm('Deseja remover esta compra?')) {
+      compras = compras.filter(c => c.id !== id);
+    }
+  }
   salvarECarregar();
 }
 
-// AUTOCOMPLETAR NOMES DE CARTÃO NO INPUT
 function atualizarDatalistCartoes() {
   const datalist = document.getElementById('lista-cartoes');
+  if (!datalist) return;
   const cartoesUnicos = [...new Set(compras.map(c => c.cartao))];
   datalist.innerHTML = cartoesUnicos.map(c => `<option value="${c}">`).join('');
 }
 
-// FUNCIONALIDADE DE BACKUP (EXPORTAR / IMPORTAR JSON)
+// ==========================================
+// BACKUP (EXPORTAR / IMPORTAR JSON)
+// ==========================================
 function exportarJSON() {
-  const dados = {
-    diaVencimento,
-    limiteMensal,
-    compras
-  };
-
+  const dados = { diaVencimento, limiteMensal, compras };
   const jsonStr = JSON.stringify(dados, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -161,14 +194,13 @@ function importarJSON(evento) {
   leitor.onload = function(e) {
     try {
       const dados = JSON.parse(e.target.result);
-
       if (dados.compras && Array.isArray(dados.compras)) {
         compras = dados.compras;
         if (dados.diaVencimento) diaVencimento = dados.diaVencimento;
         if (dados.limiteMensal) limiteMensal = dados.limiteMensal;
 
-        document.getElementById('dia-vencimento').value = diaVencimento;
-        document.getElementById('limite-mensal').value = limiteMensal;
+        if (document.getElementById('dia-vencimento')) document.getElementById('dia-vencimento').value = diaVencimento;
+        if (document.getElementById('limite-mensal')) document.getElementById('limite-mensal').value = limiteMensal;
 
         localStorage.setItem('dia_vencimento', diaVencimento);
         localStorage.setItem('limite_mensal', limiteMensal);
@@ -187,45 +219,49 @@ function importarJSON(evento) {
   evento.target.value = '';
 }
 
-// CÁLCULO DAS FATURAS COM ESTRUTURA E SUBTOTAL POR CARTÃO
+// ==========================================
+// CÁLCULOS
+// ==========================================
 function calcularFaturas() {
   const faturas = {};
+  const diaFechamento = Math.max(1, diaVencimento - 7);
 
   compras.forEach(compra => {
-    const [anoStr, mesStr] = compra.dataCompra.split('-');
-    let ano = parseInt(anoStr);
-    let mes = parseInt(mesStr) - 1;
+    const [anoStr, mesStr, diaStr] = compra.dataCompra.split('-');
+    let ano = parseInt(anoStr, 10);
+    let mes = parseInt(mesStr, 10) - 1;
+    let dia = parseInt(diaStr, 10);
 
-    const valorParcela = compra.valorTotal / compra.totalParcelas;
+    if (dia >= diaFechamento) {
+      mes += 1;
+    }
 
-    for (let i = 0; i < compra.totalParcelas; i++) {
+    // Se for recorrente, projeta para 6 meses consecutivos a partir da data de inicio
+    const ciclos = compra.recorrente ? 6 : compra.totalParcelas;
+    const valorParcela = compra.valorTotal / (compra.recorrente ? 1 : compra.totalParcelas);
+
+    for (let i = 0; i < ciclos; i++) {
       const dataParcela = new Date(ano, mes + i, 1);
       const chaveMesAno = `${dataParcela.getFullYear()}-${String(dataParcela.getMonth() + 1).padStart(2, '0')}`;
 
       if (!faturas[chaveMesAno]) {
-        faturas[chaveMesAno] = {
-          mesAno: chaveMesAno,
-          dataObjeto: dataParcela,
-          total: 0,
-          cartoes: {}
-        };
+        faturas[chaveMesAno] = { mesAno: chaveMesAno, total: 0, cartoes: {} };
       }
 
       if (!faturas[chaveMesAno].cartoes[compra.cartao]) {
-        faturas[chaveMesAno].cartoes[compra.cartao] = {
-          subtotal: 0,
-          itens: []
-        };
+        faturas[chaveMesAno].cartoes[compra.cartao] = { subtotal: 0, itens: [] };
       }
 
       faturas[chaveMesAno].total += valorParcela;
       faturas[chaveMesAno].cartoes[compra.cartao].subtotal += valorParcela;
       faturas[chaveMesAno].cartoes[compra.cartao].itens.push({
         idCompra: compra.id,
+        grupoRecorrenciaId: compra.grupoRecorrenciaId || null,
+        recorrente: compra.recorrente || false,
         estabelecimento: compra.estabelecimento,
         valorParcela: valorParcela,
         parcelaAtual: i + 1,
-        totalParcelas: compra.totalParcelas
+        totalParcelas: ciclos
       });
     }
   });
@@ -233,10 +269,78 @@ function calcularFaturas() {
   return faturas;
 }
 
-// RENDERIZAÇÃO DAS FATURAS NA TELA
+// ==========================================
+// RENDERIZAÇÃO DO GRÁFICO (PROJEÇÃO 6 MESES)
+// ==========================================
+function renderizarGraficoProjecao(faturas) {
+  const canvas = document.getElementById('grafico-faturas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+  const labels = [];
+  const valores = [];
+  const hoje = new Date();
+
+  for (let i = 0; i < 6; i++) {
+    const dataMes = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+    const chave = `${dataMes.getFullYear()}-${String(dataMes.getMonth() + 1).padStart(2, '0')}`;
+
+    labels.push(`${mesesNomes[dataMes.getMonth()]}/${String(dataMes.getFullYear()).slice(-2)}`);
+    valores.push(faturas[chave] ? faturas[chave].total : 0);
+  }
+
+  if (meuGrafico) {
+    meuGrafico.destroy();
+  }
+
+  meuGrafico = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Total da Fatura (R$)',
+        data: valores,
+        backgroundColor: valores.map(v => v > limiteMensal && limiteMensal > 0 ? '#e53e3e' : '#3182ce'),
+        borderRadius: 6,
+        maxBarThickness: 45
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => ` Total: R$ ${context.raw.toFixed(2)}`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => `R$ ${value}`
+          }
+        }
+      }
+    }
+  });
+}
+
+// ==========================================
+// RENDERIZAÇÃO DAS FATURAS
+// ==========================================
 function renderizarFaturas() {
   const container = document.getElementById('lista-faturas');
+  if (!container) return;
+
   const faturas = calcularFaturas();
+  
+  renderizarGraficoProjecao(faturas);
+
   const mesesOrdenados = Object.keys(faturas).sort();
 
   container.innerHTML = '';
@@ -249,14 +353,13 @@ function renderizarFaturas() {
   mesesOrdenados.forEach(chaveMesAno => {
     const fatura = faturas[chaveMesAno];
     const [ano, mes] = chaveMesAno.split('-');
-
     const dataVencimentoFormatada = `${String(diaVencimento).padStart(2, '0')}/${mes}/${ano}`;
 
-    const porcentagem = Math.min((fatura.total / limiteMensal) * 100, 100);
-    const porcentagemReal = ((fatura.total / limiteMensal) * 100).toFixed(1);
+    const porcentagem = limiteMensal > 0 ? Math.min((fatura.total / limiteMensal) * 100, 100) : 0;
+    const porcentagemReal = limiteMensal > 0 ? ((fatura.total / limiteMensal) * 100).toFixed(1) : 0;
 
     let classeCor = '';
-    if (fatura.total > limiteMensal) {
+    if (fatura.total > limiteMensal && limiteMensal > 0) {
       classeCor = 'excedido';
     } else if (porcentagem > 85) {
       classeCor = 'alerta';
@@ -266,18 +369,26 @@ function renderizarFaturas() {
     Object.keys(fatura.cartoes).forEach(nomeCartao => {
       const grupoCartao = fatura.cartoes[nomeCartao];
 
-      const htmlItens = grupoCartao.itens.map(item => `
-        <li>
-          <div class="item-info">
-            <strong>${item.estabelecimento}</strong>
-            <small>(${item.parcelaAtual}/${item.totalParcelas})</small>
-          </div>
-          <div class="item-acoes">
-            <strong>R$ ${item.valorParcela.toFixed(2)}</strong>
-            <button class="btn-excluir" onclick="excluirCompra(${item.idCompra})" title="Excluir compra inteira">✕</button>
-          </div>
-        </li>
-      `).join('');
+      const htmlItens = grupoCartao.itens.map(item => {
+        const tagInfo = item.recorrente
+          ? `<span class="badge-recorrente" style="background-color: #805ad5; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-left: 6px;">Recorrente</span>`
+          : `<small>(${item.parcelaAtual}/${item.totalParcelas})</small>`;
+
+        const idGrupo = item.grupoRecorrenciaId ? `'${item.grupoRecorrenciaId}'` : 'null';
+
+        return `
+          <li style="${item.recorrente ? 'background-color: #faf5ff; padding: 8px; border-radius: 6px; margin-bottom: 4px;' : ''}">
+            <div class="item-info">
+              <strong>${item.estabelecimento}</strong>
+              ${tagInfo}
+            </div>
+            <div class="item-acoes">
+              <strong style="${item.recorrente ? 'color: #6b46c1;' : ''}">R$ ${item.valorParcela.toFixed(2)}</strong>
+              <button class="btn-excluir" onclick="excluirCompra(${item.idCompra}, ${idGrupo})" title="Excluir lançamento">✕</button>
+            </div>
+          </li>
+        `;
+      }).join('');
 
       htmlCartoes += `
         <div class="grupo-cartao">
@@ -294,7 +405,7 @@ function renderizarFaturas() {
       `;
     });
 
-    const htmlFatura = `
+    container.innerHTML += `
       <div class="card-fatura">
         <div class="header-fatura">
           <h3>
@@ -314,8 +425,5 @@ function renderizarFaturas() {
         ${htmlCartoes}
       </div>
     `;
-
-    container.innerHTML += htmlFatura;
   });
 }
-
