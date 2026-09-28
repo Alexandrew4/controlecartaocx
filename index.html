@@ -6,7 +6,6 @@
   <title>Gerenciador de Faturas de Cartão</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 </head>
 <body>
   <div class="container">
@@ -18,7 +17,7 @@
       <p class="instrucoes-importacao">Cole abaixo a mensagem recebida por SMS ou notificação do banco para preencher os campos automaticamente.</p>
       
       <div class="form-group">
-        <textarea id="texto-importacao" rows="3" placeholder="Copie e cole o texto da notificacao recebida"></textarea>
+        <textarea id="texto-importacao" rows="3" placeholder="Copie e cole o texto da notificação recebida"></textarea>
       </div>
       <button type="button" id="btn-extrair" class="btn-secondary">Extrair Dados da Mensagem</button>
     </section>
@@ -55,12 +54,11 @@
         </div>
         
         <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px; margin-top: 8px;">
-  <input type="checkbox" id="compra-recorrente" style="width: auto; cursor: pointer;">
-  <label for="compra-recorrente" style="margin-bottom: 0; cursor: pointer; color: #6b46c1; font-weight: bold;">
-    Compra Recorrente (Repetir pelos próximos 6 meses)
-  </label>
-</div>
-
+          <input type="checkbox" id="compra-recorrente" style="width: auto; cursor: pointer;">
+          <label for="compra-recorrente" style="margin-bottom: 0; cursor: pointer; color: #6b46c1; font-weight: bold;">
+            Compra Recorrente (Repetir pelos próximos 6 meses)
+          </label>
+        </div>
 
         <button type="submit" class="btn-primary">Cadastrar Compra</button>
       </form>
@@ -94,20 +92,59 @@
     </section>
 
     <!-- 4. PROJEÇÃO DE FATURAS -->
-<!-- Na section "4. Projeção de Faturas", insira a div do canvas antes de #lista-faturas -->
-<section class="card-section">
-  <h2>4. Projeção de Faturas</h2>
-  
-  <!-- Container do Gráfico -->
-  <div class="chart-container" style="position: relative; height: 300px; margin-bottom: 24px;">
-    <canvas id="grafico-faturas"></canvas>
+    <section class="card-section">
+      <h2>4. Projeção de Faturas</h2>
+      
+      <!-- Container do Gráfico -->
+      <div class="chart-container" style="position: relative; height: 300px; margin-bottom: 24px;">
+        <canvas id="grafico-faturas"></canvas>
+      </div>
+
+      <div id="lista-faturas">
+        <p class="mensagem-vazia">Nenhuma compra cadastrada no navegador.</p>
+      </div>
+    </section>
   </div>
 
-  <div id="lista-faturas">
-    <p class="mensagem-vazia">Nenhuma compra cadastrada no navegador.</p>
-  </div>
-</section>
+  <!-- MODAL DE EDIÇÃO DE COMPRA -->
+  <div id="modal-edicao" class="modal" style="display: none;">
+    <div class="modal-content card-section">
+      <h2>Editar Compra</h2>
+      <form id="form-editar-compra">
+        <input type="hidden" id="edit-id">
 
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-estabelecimento">Estabelecimento / Descrição:</label>
+            <input type="text" id="edit-estabelecimento" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-cartao">Cartão de Crédito:</label>
+            <input type="text" id="edit-cartao" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-valor-total">Valor Total (R$):</label>
+            <input type="number" id="edit-valor-total" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-total-parcelas">Qtd. Parcelas:</label>
+            <input type="number" id="edit-total-parcelas" min="1" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-data-compra">Data da Compra:</label>
+            <input type="date" id="edit-data-compra" required>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn-primary">Salvar Alterações</button>
+          <button type="button" id="btn-cancelar-edicao" class="btn-secondary">Cancelar</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script src="script.js"></script>

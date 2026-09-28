@@ -37,6 +37,17 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnExportar) btnExportar.addEventListener('click', exportarJSON);
   if (inputImportar) inputImportar.addEventListener('change', importarJSON);
 
+  // LISTENERS DO MODAL DE EDIÇÃO
+  const formEditarCompra = document.getElementById('form-editar-compra');
+  if (formEditarCompra) {
+    formEditarCompra.addEventListener('submit', salvarEdicaoCompra);
+  }
+
+  const btnCancelarEdicao = document.getElementById('btn-cancelar-edicao');
+  if (btnCancelarEdicao) {
+    btnCancelarEdicao.addEventListener('click', fecharModalEdicao);
+  }
+
   atualizarDatalistCartoes();
   renderizarFaturas();
 });
@@ -161,6 +172,61 @@ function excluirCompra(id, grupoRecorrenciaId = null) {
   salvarECarregar();
 }
 
+// ==========================================
+// MÓDULO DE EDIÇÃO / ALTERAÇÃO DE REGISTRO
+// ==========================================
+function abrirModalEdicao(id) {
+  const compra = compras.find(c => c.id === id);
+  if (!compra) return;
+
+  document.getElementById('edit-id').value = compra.id;
+  document.getElementById('edit-estabelecimento').value = compra.estabelecimento;
+  document.getElementById('edit-cartao').value = compra.cartao;
+  document.getElementById('edit-valor-total').value = compra.valorTotal;
+  document.getElementById('edit-total-parcelas').value = compra.totalParcelas;
+  document.getElementById('edit-data-compra').value = compra.dataCompra;
+
+  const modal = document.getElementById('modal-edicao');
+  if (modal) modal.style.display = 'flex';
+}
+
+function fecharModalEdicao() {
+  const modal = document.getElementById('modal-edicao');
+  if (modal) modal.style.display = 'none';
+}
+
+function salvarEdicaoCompra(e) {
+  e.preventDefault();
+
+  const id = parseInt(document.getElementById('edit-id').value, 10);
+  const index = compras.findIndex(c => c.id === id);
+
+  if (index === -1) {
+    alert('Registro não encontrado.');
+    return;
+  }
+
+  const estabelecimento = document.getElementById('edit-estabelecimento').value.trim();
+  const cartao = document.getElementById('edit-cartao').value.trim();
+  const valorTotal = parseFloat(document.getElementById('edit-valor-total').value);
+  const totalParcelas = parseInt(document.getElementById('edit-total-parcelas').value, 10);
+  const dataCompra = document.getElementById('edit-data-compra').value;
+
+  if (!estabelecimento || !cartao || isNaN(valorTotal) || !dataCompra) {
+    alert('Preencha todos os campos corretamente.');
+    return;
+  }
+
+  compras[index].estabelecimento = estabelecimento;
+  compras[index].cartao = cartao;
+  compras[index].valorTotal = valorTotal;
+  compras[index].totalParcelas = compras[index].recorrente ? 1 : (totalParcelas || 1);
+  compras[index].dataCompra = dataCompra;
+
+  salvarECarregar();
+  fecharModalEdicao();
+}
+
 function atualizarDatalistCartoes() {
   const datalist = document.getElementById('lista-cartoes');
   if (!datalist) return;
@@ -236,7 +302,6 @@ function calcularFaturas() {
       mes += 1;
     }
 
-    // Se for recorrente, projeta para 6 meses consecutivos a partir da data de inicio
     const ciclos = compra.recorrente ? 6 : compra.totalParcelas;
     const valorParcela = compra.valorTotal / (compra.recorrente ? 1 : compra.totalParcelas);
 
@@ -382,8 +447,9 @@ function renderizarFaturas() {
               <strong>${item.estabelecimento}</strong>
               ${tagInfo}
             </div>
-            <div class="item-acoes">
+            <div class="item-acoes" style="display: flex; align-items: center; gap: 8px;">
               <strong style="${item.recorrente ? 'color: #6b46c1;' : ''}">R$ ${item.valorParcela.toFixed(2)}</strong>
+              <button class="btn-editar" onclick="abrirModalEdicao(${item.idCompra})" title="Editar lançamento">✏️</button>
               <button class="btn-excluir" onclick="excluirCompra(${item.idCompra}, ${idGrupo})" title="Excluir lançamento">✕</button>
             </div>
           </li>
