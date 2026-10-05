@@ -2,23 +2,35 @@
 // ESTADO GLOBAL & INICIALIZAÇÃO
 // ==========================================
 let compras = JSON.parse(localStorage.getItem('compras_cartao')) || [];
-let diaVencimento = parseInt(localStorage.getItem('dia_vencimento')) || 10;
+let dataVencimentoConfig = localStorage.getItem('data_vencimento') || '9';
+let diasFechamentoConfig = parseInt(localStorage.getItem('dias_fechamento'), 10) || 7;
 let limiteMensal = parseFloat(localStorage.getItem('limite_mensal')) || 2000;
 let meuGrafico = null; // Instância do Chart.js
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Preenche a data de hoje por padrão no formulário
   document.getElementById('data-compra').valueAsDate = new Date();
   
   const inputVencimento = document.getElementById('dia-vencimento');
+  const inputDiasFechamento = document.getElementById('dias-fechamento');
   const inputLimite = document.getElementById('limite-mensal');
 
-  if (inputVencimento) inputVencimento.value = diaVencimento;
+  if (inputVencimento) inputVencimento.value = dataVencimentoConfig;
+  if (inputDiasFechamento) inputDiasFechamento.value = diasFechamentoConfig;
   if (inputLimite) inputLimite.value = limiteMensal;
 
   if (inputVencimento) {
     inputVencimento.addEventListener('input', (e) => {
-      diaVencimento = parseInt(e.target.value) || 10;
-      localStorage.setItem('dia_vencimento', diaVencimento);
+      dataVencimentoConfig = e.target.value || '9';
+      localStorage.setItem('data_vencimento', dataVencimentoConfig);
+      renderizarFaturas();
+    });
+  }
+
+  if (inputDiasFechamento) {
+    inputDiasFechamento.addEventListener('input', (e) => {
+      diasFechamentoConfig = parseInt(e.target.value, 10) || 7;
+      localStorage.setItem('dias_fechamento', diasFechamentoConfig);
       renderizarFaturas();
     });
   }
@@ -173,7 +185,7 @@ function excluirCompra(id, grupoRecorrenciaId = null) {
 }
 
 // ==========================================
-// MÓDULO DE EDIÇÃO / ALTERAÇÃO DE REGISTRO
+// MÓDULO DE EDIÇÃO DE REGISTRO
 // ==========================================
 function abrirModalEdicao(id) {
   const compra = compras.find(c => c.id === id);
@@ -238,7 +250,7 @@ function atualizarDatalistCartoes() {
 // BACKUP (EXPORTAR / IMPORTAR JSON)
 // ==========================================
 function exportarJSON() {
-  const dados = { diaVencimento, limiteMensal, compras };
+  const dados = { dataVencimentoConfig, diasFechamentoConfig, limiteMensal, compras };
   const jsonStr = JSON.stringify(dados, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -262,13 +274,16 @@ function importarJSON(evento) {
       const dados = JSON.parse(e.target.result);
       if (dados.compras && Array.isArray(dados.compras)) {
         compras = dados.compras;
-        if (dados.diaVencimento) diaVencimento = dados.diaVencimento;
+        if (dados.dataVencimentoConfig) dataVencimentoConfig = dados.dataVencimentoConfig;
+        if (dados.diasFechamentoConfig) diasFechamentoConfig = dados.diasFechamentoConfig;
         if (dados.limiteMensal) limiteMensal = dados.limiteMensal;
 
-        if (document.getElementById('dia-vencimento')) document.getElementById('dia-vencimento').value = diaVencimento;
+        if (document.getElementById('dia-vencimento')) document.getElementById('dia-vencimento').value = dataVencimentoConfig;
+        if (document.getElementById('dias-fechamento')) document.getElementById('dias-fechamento').value = diasFechamentoConfig;
         if (document.getElementById('limite-mensal')) document.getElementById('limite-mensal').value = limiteMensal;
 
-        localStorage.setItem('dia_vencimento', diaVencimento);
+        localStorage.setItem('data_vencimento', dataVencimentoConfig);
+        localStorage.setItem('dias_fechamento', diasFechamentoConfig);
         localStorage.setItem('limite_mensal', limiteMensal);
         salvarECarregar();
 
@@ -286,27 +301,37 @@ function importarJSON(evento) {
 }
 
 // ==========================================
-// CÁLCULOS
+// CÁLCULOS DE CICLO DE FATURA (REGRA DE FECHAMENTO EXATA)
 // ==========================================
 function calcularFaturas() {
   const faturas = {};
-  const diaFechamento = Math.max(1, diaVencimento - 7);
+
+  // Extrai o dia de fechamento configurado (suporta número direto '9' ou formato '2026-10-09')
+  const strVenc = String(dataVencimentoConfig || '9');
+  const diaFechamento = strVenc.includes('-') ? parseInt(strVenc.split('-')[2], 10) || 9 : parseInt(strVenc, 10) || 9;
 
   compras.forEach(compra => {
-    const [anoStr, mesStr, diaStr] = compra.dataCompra.split('-');
-    let ano = parseInt(anoStr, 10);
-    let mes = parseInt(mesStr, 10) - 1;
-    let dia = parseInt(diaStr, 10);
+    const [anoC, mesC, diaC] = compra.dataCompra.split('-').map(Number);
 
-    if (dia >= diaFechamento) {
-      mes += 1;
+    let anoPrimeiraFatura = anoC;
+    let mesPrimeiraFatura = mesC - 1; // 0-indexed (0 = Jan, 9 = Out)
+
+    // REGRA DE FECHAMENTO DIRETA:
+    // 1. Compras feitas ATÉ a data de fechamento (ex: <= dia 9) -> Fatura do mês anterior
+    if (diaC <= diaFechamento) {
+      mesPrimeiraFatura -= 1;
+      if (mesPrimeiraFatura < 0) {
+        mesPrimeiraFatura = 11;
+        anoPrimeiraFatura -= 1;
+      }
     }
+    // 2. Compras a partir do dia seguinte ao fechamento (ex: >= dia 10) -> Permanecem no mês corrente
 
     const ciclos = compra.recorrente ? 6 : compra.totalParcelas;
     const valorParcela = compra.valorTotal / (compra.recorrente ? 1 : compra.totalParcelas);
 
     for (let i = 0; i < ciclos; i++) {
-      const dataParcela = new Date(ano, mes + i, 1);
+      const dataParcela = new Date(anoPrimeiraFatura, mesPrimeiraFatura + i, 1);
       const chaveMesAno = `${dataParcela.getFullYear()}-${String(dataParcela.getMonth() + 1).padStart(2, '0')}`;
 
       if (!faturas[chaveMesAno]) {
@@ -396,7 +421,7 @@ function renderizarGraficoProjecao(faturas) {
 }
 
 // ==========================================
-// RENDERIZAÇÃO DAS FATURAS
+// RENDERIZAÇÃO DAS FATURAS NA TELA
 // ==========================================
 function renderizarFaturas() {
   const container = document.getElementById('lista-faturas');
@@ -415,10 +440,14 @@ function renderizarFaturas() {
     return;
   }
 
+  const strVenc = String(dataVencimentoConfig || '9');
+  const diaVencNum = strVenc.includes('-') ? parseInt(strVenc.split('-')[2], 10) || 9 : parseInt(strVenc, 10) || 9;
+  const diaVencExibicao = String(diaVencNum).padStart(2, '0');
+
   mesesOrdenados.forEach(chaveMesAno => {
     const fatura = faturas[chaveMesAno];
     const [ano, mes] = chaveMesAno.split('-');
-    const dataVencimentoFormatada = `${String(diaVencimento).padStart(2, '0')}/${mes}/${ano}`;
+    const dataVencimentoFormatada = `${diaVencExibicao}/${mes}/${ano}`;
 
     const porcentagem = limiteMensal > 0 ? Math.min((fatura.total / limiteMensal) * 100, 100) : 0;
     const porcentagemReal = limiteMensal > 0 ? ((fatura.total / limiteMensal) * 100).toFixed(1) : 0;
